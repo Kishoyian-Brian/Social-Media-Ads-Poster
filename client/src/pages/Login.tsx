@@ -32,44 +32,56 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-4">Login</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <div className="fixed inset-0 flex items-center justify-center bg-black px-4 text-left">
+      <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-8">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sm font-bold text-black">
+            SM
+          </div>
+          <div>
+            <p className="font-semibold text-white">Social Manager</p>
+            <p className="text-xs text-neutral-500">Publish everywhere</p>
+          </div>
+        </div>
+
+        <h1 className="text-3xl font-bold text-white">Sign in</h1>
+        <p className="mt-2 text-sm text-neutral-400">Welcome back. Log in to manage your posts.</p>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">Email</span>
+            <span className="text-sm font-medium text-neutral-300">Email</span>
             <input
               type="email"
               autoComplete="email"
               required
               {...register('email')}
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-slate-400 focus:outline-none"
+              className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-white placeholder:text-neutral-600 focus:border-white focus:outline-none"
             />
           </label>
 
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">Password</span>
+            <span className="text-sm font-medium text-neutral-300">Password</span>
             <input
               type="password"
               autoComplete="current-password"
               required
               {...register('password')}
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 focus:border-slate-400 focus:outline-none"
+              className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-white placeholder:text-neutral-600 focus:border-white focus:outline-none"
             />
           </label>
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-xl bg-slate-900 text-white py-3 font-semibold hover:bg-slate-800 disabled:opacity-60"
+            className="w-full rounded-xl bg-white py-3 font-semibold text-black transition hover:bg-neutral-200 disabled:opacity-60"
           >
             {submitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
-        <p className="mt-6 text-sm text-slate-600">
+        <p className="mt-6 text-sm text-neutral-400">
           Need an account?{' '}
-          <Link to="/register" className="text-slate-900 font-semibold hover:underline">
+          <Link to="/register" className="font-semibold text-white hover:underline">
             Register
           </Link>
         </p>

@@ -8,23 +8,45 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  password     String
-  createdAt    DateTime @default(now())
-  xAccessToken String?
+  id                 String    @id @default(uuid())
+  name               String
+  email              String    @unique
+  password           String
+  createdAt          DateTime  @default(now())
+  xAccessToken       String?
+  xRefreshToken      String?
+  xTokenExpires      DateTime?
+  tiktokAccessToken  String?
+  tiktokRefreshToken String?
+  tiktokTokenExpires DateTime?
+  tiktokOpenId       String?
 
   posts Post[]
 }
 
+model PendingRegistration {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  otpHash      String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+}
+
 model Post {
-  id          String   @id @default(uuid())
-  content     String
-  imageUrl    String?
-  status      String   @default("pending")
-  scheduledAt DateTime?
-  createdAt   DateTime @default(now())
+  id              String    @id @default(uuid())
+  content         String
+  imageUrl        String?
+  status          String    @default("pending")
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  failReason      String?
+  platforms       Json      @default("[\"x\", \"tiktok\"]")
+  platformResults Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   userId String
-  user   User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

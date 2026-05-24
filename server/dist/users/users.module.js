@@ -14,6 +14,7 @@ const users_service_1 = require("./users.service");
 const users_controller_1 = require("./users.controller");
 const prisma_module_1 = require("../prisma/prisma.module");
 const x_service_1 = require("../integrations/x.service");
+const tiktok_service_1 = require("../integrations/tiktok.service");
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
@@ -30,8 +31,8 @@ exports.UsersModule = UsersModule = __decorate([
                 }),
             }),
         ],
-        providers: [users_service_1.UsersService, x_service_1.XService],
+        providers: [users_service_1.UsersService, x_service_1.XService, tiktok_service_1.TikTokService],
         controllers: [users_controller_1.UsersController],
-        exports: [users_service_1.UsersService],
+        exports: [users_service_1.UsersService, tiktok_service_1.TikTokService],
     })
 ], UsersModule);

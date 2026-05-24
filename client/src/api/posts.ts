@@ -4,7 +4,11 @@ export interface PostDTO {
   id: string
   content: string
   imageUrl?: string | null
+  status?: string
   scheduledAt?: string | null
+  publishedAt?: string | null
+  failReason?: string | null
+  platformResults?: Record<string, string> | null
   createdAt: string
 }
 

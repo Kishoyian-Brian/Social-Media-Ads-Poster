@@ -15,6 +15,18 @@ export function getXOAuthUrl(token: string) {
     .then((response) => response.data.url)
 }
 
-export function connectX(token: string) {
-  return getXOAuthUrl(token)
+export function getTikTokOAuthUrl(token: string) {
+  return api
+    .get<{ url: string }>('/users/tiktok/oauth-url', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .then((response) => response.data.url)
+}
+
+export function disconnectTikTok(token: string) {
+  return api
+    .delete('/users/tiktok/connection', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .then((r) => r.data)
 }

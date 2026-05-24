@@ -12,12 +12,13 @@ const posts_service_1 = require("./posts.service");
 const posts_controller_1 = require("./posts.controller");
 const prisma_module_1 = require("../prisma/prisma.module");
 const x_service_1 = require("../integrations/x.service");
+const users_module_1 = require("../users/users.module");
 let PostsModule = class PostsModule {
 };
 exports.PostsModule = PostsModule;
 exports.PostsModule = PostsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
+        imports: [prisma_module_1.PrismaModule, users_module_1.UsersModule],
         providers: [posts_service_1.PostsService, x_service_1.XService],
         controllers: [posts_controller_1.PostsController],
     })

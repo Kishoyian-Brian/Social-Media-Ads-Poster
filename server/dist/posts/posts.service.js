@@ -14,10 +14,14 @@ exports.PostsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const x_service_1 = require("../integrations/x.service");
+const tiktok_service_1 = require("../integrations/tiktok.service");
+const users_service_1 = require("../users/users.service");
 let PostsService = PostsService_1 = class PostsService {
-    constructor(prisma, xService) {
+    constructor(prisma, xService, tiktokService, usersService) {
         this.prisma = prisma;
         this.xService = xService;
+        this.tiktokService = tiktokService;
+        this.usersService = usersService;
         this.logger = new common_1.Logger(PostsService_1.name);
     }
     async create(userId, dto) {
@@ -29,24 +33,64 @@ let PostsService = PostsService_1 = class PostsService {
                 userId,
             },
         });
+        const results = {};
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
             select: { xAccessToken: true },
         });
-        if (!user?.xAccessToken) {
-            this.logger.warn(`User ${userId} is not connected to X. Saving post without publishing.`);
-            return post;
+        if (user?.xAccessToken) {
+            const xResult = await this.xService.publishAd(dto.content, dto.imageUrl, user.xAccessToken);
+            results.x = xResult.success ? 'sent' : `failed:${xResult.reason ?? 'unknown'}`;
         }
-        const publishResult = await this.xService.publishAd(dto.content, dto.imageUrl, user.xAccessToken);
-        if (publishResult.success) {
-            this.logger.log(`Published post to X for user ${userId}`);
+        else {
+            results.x = 'skipped:not_connected';
+        }
+        if (dto.imageUrl) {
+            const tiktokToken = await this.usersService.getValidTikTokAccessToken(userId);
+            if (tiktokToken) {
+                const tiktokResult = await this.tiktokService.publishPhoto(dto.content, dto.imageUrl, tiktokToken);
+                results.tiktok = tiktokResult.success ? 'sent' : `failed:${tiktokResult.reason ?? 'unknown'}`;
+            }
+            else {
+                results.tiktok = 'skipped:not_connected';
+            }
+        }
+        else {
+            results.tiktok = 'skipped:no_image';
+        }
+        const attempts = Object.values(results).filter((v) => !v.startsWith('skipped'));
+        const successes = attempts.filter((v) => v === 'sent');
+        if (successes.length > 0) {
             return this.prisma.post.update({
                 where: { id: post.id },
-                data: { status: 'sent' },
+                data: {
+                    status: 'sent',
+                    publishedAt: new Date(),
+                    platformResults: results,
+                    failReason: null,
+                },
             });
         }
-        this.logger.warn(`Post saved but X publish skipped or failed for user ${userId}: ${publishResult.reason}`);
-        return post;
+        if (attempts.length === 0) {
+            return this.prisma.post.update({
+                where: { id: post.id },
+                data: {
+                    status: 'pending',
+                    platformResults: results,
+                    failReason: 'Connect X or TikTok to publish',
+                },
+            });
+        }
+        return this.prisma.post.update({
+            where: { id: post.id },
+            data: {
+                status: 'failed',
+                platformResults: results,
+                failReason: Object.entries(results)
+                    .map(([k, v]) => `${k}: ${v.replace('failed:', '')}`)
+                    .join('; '),
+            },
+        });
     }
     findAllForUser(userId) {
         return this.prisma.post.findMany({
@@ -58,5 +102,8 @@ let PostsService = PostsService_1 = class PostsService {
 exports.PostsService = PostsService;
 exports.PostsService = PostsService = PostsService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService, x_service_1.XService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        x_service_1.XService,
+        tiktok_service_1.TikTokService,
+        users_service_1.UsersService])
 ], PostsService);

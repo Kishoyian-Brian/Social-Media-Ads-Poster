@@ -19,24 +19,38 @@ const register_dto_1 = require("./dto/register.dto");
 const login_dto_1 = require("./dto/login.dto");
 const jwt_auth_guard_1 = require("../common/guards/jwt-auth.guard");
 const users_service_1 = require("../users/users.service");
+const prisma_service_1 = require("../prisma/prisma.service");
 let AuthController = class AuthController {
-    constructor(authService, usersService) {
+    constructor(authService, usersService, prisma) {
         this.authService = authService;
         this.usersService = usersService;
+        this.prisma = prisma;
     }
     register(body) {
         return this.authService.register(body);
+    }
+    verifyRegister(body) {
+        return this.authService.verifyRegister(body);
     }
     login(body) {
         return this.authService.login(body);
     }
     async me(req) {
-        const user = await this.usersService.findById(req.user.id);
-        const tokenInfo = await this.usersService.findByIdWithToken(req.user.id);
-        if (!user) {
-            return { user: { id: req.user.id, email: req.user.email, xConnected: Boolean(tokenInfo?.xAccessToken) } };
-        }
-        return { user: { id: user.id, email: user.email, xConnected: Boolean(tokenInfo?.xAccessToken) } };
+        const [user, flags] = await Promise.all([
+            this.prisma.user.findUnique({
+                where: { id: req.user.id },
+                select: { id: true, name: true, email: true },
+            }),
+            this.usersService.getConnectionFlags(req.user.id),
+        ]);
+        return {
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                ...flags,
+            },
+        };
     }
 };
 exports.AuthController = AuthController;
@@ -47,6 +61,13 @@ __decorate([
     __metadata("design:paramtypes", [register_dto_1.RegisterDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "register", null);
+__decorate([
+    (0, common_1.Post)('verify-register'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [register_dto_1.VerifyRegisterDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "verifyRegister", null);
 __decorate([
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),
@@ -64,5 +85,7 @@ __decorate([
 ], AuthController.prototype, "me", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
-    __metadata("design:paramtypes", [auth_service_1.AuthService, users_service_1.UsersService])
+    __metadata("design:paramtypes", [auth_service_1.AuthService,
+        users_service_1.UsersService,
+        prisma_service_1.PrismaService])
 ], AuthController);

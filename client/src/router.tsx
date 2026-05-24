@@ -12,7 +12,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
   if (auth.loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-700">
+      <div className="fixed inset-0 flex items-center justify-center bg-black text-neutral-300">
         Loading session...
       </div>
     )
