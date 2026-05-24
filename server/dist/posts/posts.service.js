@@ -40,7 +40,15 @@ let PostsService = PostsService_1 = class PostsService {
         });
         if (user?.xAccessToken) {
             const xResult = await this.xService.publishAd(dto.content, dto.imageUrl, user.xAccessToken);
-            results.x = xResult.success ? 'sent' : `failed:${xResult.reason ?? 'unknown'}`;
+            if (xResult.success) {
+                results.x = 'sent';
+            }
+            else {
+                const detail = 'status' in xResult && xResult.status != null
+                    ? `${xResult.reason ?? 'unknown'}:${xResult.status}`
+                    : (xResult.reason ?? 'unknown');
+                results.x = `failed:${detail}`;
+            }
         }
         else {
             results.x = 'skipped:not_connected';
@@ -87,7 +95,7 @@ let PostsService = PostsService_1 = class PostsService {
                 status: 'failed',
                 platformResults: results,
                 failReason: Object.entries(results)
-                    .map(([k, v]) => `${k}: ${v.replace('failed:', '')}`)
+                    .map(([k, v]) => `${k}: ${v.replace(/^(failed|skipped):/, '')}`)
                     .join('; '),
             },
         });

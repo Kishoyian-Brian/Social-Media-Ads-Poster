@@ -18,7 +18,7 @@ let XService = XService_1 = class XService {
         this.config = config;
         this.logger = new common_1.Logger(XService_1.name);
         this.bearerToken = this.config.get('X_BEARER_TOKEN');
-        this.apiUrl = this.config.get('X_API_URL') ?? 'https://api.twitter.com/2/tweets';
+        this.apiUrl = this.config.get('X_API_URL') ?? 'https://api.x.com/2/tweets';
         this.clientId = this.config.get('X_CLIENT_ID');
         this.clientSecret = this.config.get('X_CLIENT_SECRET');
         this.redirectUri = this.config.get('X_OAUTH_REDIRECT_URI');
@@ -75,7 +75,7 @@ let XService = XService_1 = class XService {
         }
         const body = { text: content };
         if (imageUrl) {
-            body.media = { media_urls: [imageUrl] };
+            this.logger.warn('X image posts require media upload; publishing text only until media upload is implemented.');
         }
         try {
             const response = await fetch(this.apiUrl, {
@@ -89,7 +89,12 @@ let XService = XService_1 = class XService {
             const payload = await response.text();
             if (!response.ok) {
                 this.logger.error(`X publish failed (${response.status}): ${payload}`);
-                return { success: false, reason: 'http_error', status: response.status, payload };
+                return {
+                    success: false,
+                    reason: 'http_error',
+                    status: response.status,
+                    payload: payload.slice(0, 500),
+                };
             }
             this.logger.log(`X publish succeeded: ${payload}`);
             return { success: true, data: JSON.parse(payload) };

@@ -15,7 +15,7 @@ export class XService {
 
   constructor(private config: ConfigService) {
     this.bearerToken = this.config.get<string>('X_BEARER_TOKEN')
-    this.apiUrl = this.config.get<string>('X_API_URL') ?? 'https://api.twitter.com/2/tweets'
+    this.apiUrl = this.config.get<string>('X_API_URL') ?? 'https://api.x.com/2/tweets'
     this.clientId = this.config.get<string>('X_CLIENT_ID')
     this.clientSecret = this.config.get<string>('X_CLIENT_SECRET')
     this.redirectUri = this.config.get<string>('X_OAUTH_REDIRECT_URI')
@@ -83,8 +83,10 @@ export class XService {
 
     const body: Record<string, unknown> = { text: content }
 
-    if (imageUrl) {
-      body.media = { media_urls: [imageUrl] }
+  if (imageUrl) {
+      this.logger.warn(
+        'X image posts require media upload; publishing text only until media upload is implemented.',
+      )
     }
 
     try {
@@ -100,7 +102,12 @@ export class XService {
       const payload = await response.text()
       if (!response.ok) {
         this.logger.error(`X publish failed (${response.status}): ${payload}`)
-        return { success: false, reason: 'http_error', status: response.status, payload }
+        return {
+          success: false,
+          reason: 'http_error',
+          status: response.status,
+          payload: payload.slice(0, 500),
+        } as const
       }
 
       this.logger.log(`X publish succeeded: ${payload}`)
