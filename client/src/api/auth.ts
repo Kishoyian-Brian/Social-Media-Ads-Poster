@@ -13,10 +13,8 @@ export interface AuthResponse {
   user: UserDTO
 }
 
-export interface RegisterOtpResponse {
+export interface RegisterResponse {
   message: string
-  email: string
-  otpSent: boolean
 }
 
 const api = axios.create({
@@ -30,17 +28,18 @@ export function login(email: string, password: string) {
   return api.post<AuthResponse>('/auth/login', { email, password }).then((response) => response.data)
 }
 
-export function requestRegister(name: string, email: string, password: string) {
+export function register(name: string, email: string, password: string) {
   return api
-    .post<RegisterOtpResponse>('/auth/register', { name, email, password })
+    .post<RegisterResponse>('/auth/register', { name, email, password })
     .then((response) => response.data)
 }
 
-export function verifyRegister(email: string, code: string) {
-  return api
-    .post<AuthResponse>('/auth/verify-register', { email, code })
-    .then((response) => response.data)
-}
+// Email OTP (disabled)
+// export function verifyRegister(email: string, code: string) {
+//   return api
+//     .post<AuthResponse>('/auth/verify-register', { email, code })
+//     .then((response) => response.data)
+// }
 
 export function getMe(token: string) {
   return api

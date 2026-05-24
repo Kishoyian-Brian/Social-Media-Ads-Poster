@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common'
 import { AuthService } from './auth.service'
-import { RegisterDto, VerifyRegisterDto } from './dto/register.dto'
+import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { UsersService } from '../users/users.service'
@@ -19,10 +19,10 @@ export class AuthController {
     return this.authService.register(body)
   }
 
-  @Post('verify-register')
-  verifyRegister(@Body() body: VerifyRegisterDto) {
-    return this.authService.verifyRegister(body)
-  }
+  // @Post('verify-register')
+  // verifyRegister(@Body() body: VerifyRegisterDto) {
+  //   return this.authService.verifyRegister(body)
+  // }
 
   @Post('login')
   login(@Body() body: LoginDto) {
