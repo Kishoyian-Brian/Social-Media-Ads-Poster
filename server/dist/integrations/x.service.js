@@ -26,7 +26,7 @@ let XService = XService_1 = class XService {
         this.tokenUrl = this.config.get('X_OAUTH_TOKEN_URL') ?? 'https://api.twitter.com/2/oauth2/token';
         this.scopes = this.config.get('X_OAUTH_SCOPES') ?? 'tweet.read tweet.write users.read offline.access';
     }
-    getOAuthUrl(state) {
+    getOAuthUrl(state, codeChallenge) {
         if (!this.clientId || !this.redirectUri) {
             throw new Error('Missing X OAuth client configuration');
         }
@@ -36,10 +36,12 @@ let XService = XService_1 = class XService {
             redirect_uri: this.redirectUri,
             scope: this.scopes,
             state,
+            code_challenge: codeChallenge,
+            code_challenge_method: 'S256',
         });
         return `${this.authUrl}?${params.toString()}`;
     }
-    async exchangeCode(code) {
+    async exchangeCode(code, codeVerifier) {
         if (!this.clientId || !this.clientSecret || !this.redirectUri) {
             throw new Error('Missing X OAuth client configuration');
         }
@@ -49,6 +51,7 @@ let XService = XService_1 = class XService {
         body.set('redirect_uri', this.redirectUri);
         body.set('client_id', this.clientId);
         body.set('client_secret', this.clientSecret);
+        body.set('code_verifier', codeVerifier);
         const response = await fetch(this.tokenUrl, {
             method: 'POST',
             headers: {

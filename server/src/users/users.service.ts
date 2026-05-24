@@ -39,10 +39,20 @@ export class UsersService {
     })
   }
 
-  updateXToken(userId: string, token: string) {
+  updateXToken(
+    userId: string,
+    tokens: { access_token: string; refresh_token?: string; expires_in?: number },
+  ) {
+    const expiresAt =
+      tokens.expires_in != null ? new Date(Date.now() + tokens.expires_in * 1000) : null
+
     return this.prisma.user.update({
       where: { id: userId },
-      data: { xAccessToken: token },
+      data: {
+        xAccessToken: tokens.access_token,
+        xRefreshToken: tokens.refresh_token ?? null,
+        xTokenExpires: expiresAt,
+      },
       select: { id: true, email: true, createdAt: true },
     })
   }

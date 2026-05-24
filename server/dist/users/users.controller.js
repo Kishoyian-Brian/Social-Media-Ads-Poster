@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var UsersController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
@@ -20,20 +21,23 @@ const users_service_1 = require("./users.service");
 const x_service_1 = require("../integrations/x.service");
 const tiktok_service_1 = require("../integrations/tiktok.service");
 const jwt_auth_guard_1 = require("../common/guards/jwt-auth.guard");
-let UsersController = class UsersController {
+const pkce_util_1 = require("../common/utils/pkce.util");
+let UsersController = UsersController_1 = class UsersController {
     constructor(usersService, xService, tiktokService, jwtService, configService) {
         this.usersService = usersService;
         this.xService = xService;
         this.tiktokService = tiktokService;
         this.jwtService = jwtService;
         this.configService = configService;
+        this.logger = new common_1.Logger(UsersController_1.name);
     }
     async getXOAuthUrl(req) {
-        const state = this.jwtService.sign({ id: req.user.id, type: 'x_oauth' }, {
+        const { codeVerifier, codeChallenge } = (0, pkce_util_1.generatePkcePair)();
+        const state = this.jwtService.sign({ id: req.user.id, type: 'x_oauth', codeVerifier }, {
             secret: this.configService.get('JWT_SECRET') ?? 'dev-secret',
             expiresIn: '10m',
         });
-        return { url: this.xService.getOAuthUrl(state) };
+        return { url: this.xService.getOAuthUrl(state, codeChallenge) };
     }
     async handleXCallback(code, state, res) {
         const redirectTarget = this.configService.get('X_OAUTH_FRONTEND_REDIRECT') ??
@@ -45,14 +49,15 @@ let UsersController = class UsersController {
             const payload = (await this.jwtService.verifyAsync(state, {
                 secret: this.configService.get('JWT_SECRET') ?? 'dev-secret',
             }));
-            if (payload.type !== 'x_oauth') {
+            if (payload.type !== 'x_oauth' || !payload.codeVerifier) {
                 return res.redirect(`${redirectTarget}?x_connected=0`);
             }
-            const tokenResponse = await this.xService.exchangeCode(code);
-            await this.usersService.updateXToken(payload.id, tokenResponse.access_token);
+            const tokenResponse = await this.xService.exchangeCode(code, payload.codeVerifier);
+            await this.usersService.updateXToken(payload.id, tokenResponse);
             return res.redirect(`${redirectTarget}?x_connected=1`);
         }
-        catch {
+        catch (error) {
+            this.logger.error('X OAuth callback failed', error);
             return res.redirect(`${redirectTarget}?x_connected=0`);
         }
     }
@@ -80,7 +85,8 @@ let UsersController = class UsersController {
             await this.usersService.saveTikTokTokens(payload.id, tokenResponse);
             return res.redirect(`${redirectTarget}?tiktok_connected=1`);
         }
-        catch {
+        catch (error) {
+            this.logger.error('TikTok OAuth callback failed', error);
             return res.redirect(`${redirectTarget}?tiktok_connected=0`);
         }
     }
@@ -142,7 +148,7 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "findOne", null);
-exports.UsersController = UsersController = __decorate([
+exports.UsersController = UsersController = UsersController_1 = __decorate([
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [users_service_1.UsersService,
         x_service_1.XService,
