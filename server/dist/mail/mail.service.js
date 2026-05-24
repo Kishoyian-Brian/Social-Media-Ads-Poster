@@ -41,17 +41,23 @@ let MailService = MailService_1 = class MailService {
             this.logger.warn(`SMTP not configured. OTP for ${to}: ${code}`);
             return { delivered: false, devLogged: true };
         }
-        const transporter = nodemailer_1.default.createTransport({
-            host: this.config.get('SMTP_HOST'),
-            port: Number(this.config.get('SMTP_PORT') ?? 587),
-            secure: this.config.get('SMTP_SECURE') === 'true',
-            auth: {
-                user: this.config.get('SMTP_USER'),
-                pass: this.config.get('SMTP_PASS'),
-            },
-        });
-        await transporter.sendMail({ from: this.from, to, subject, text, html });
-        return { delivered: true, devLogged: false };
+        try {
+            const transporter = nodemailer_1.default.createTransport({
+                host: this.config.get('SMTP_HOST'),
+                port: Number(this.config.get('SMTP_PORT') ?? 587),
+                secure: this.config.get('SMTP_SECURE') === 'true',
+                auth: {
+                    user: this.config.get('SMTP_USER'),
+                    pass: this.config.get('SMTP_PASS'),
+                },
+            });
+            await transporter.sendMail({ from: this.from, to, subject, text, html });
+            return { delivered: true, devLogged: false };
+        }
+        catch (error) {
+            this.logger.error(`Failed to send OTP email to ${to}`, error);
+            throw error;
+        }
     }
 };
 exports.MailService = MailService;

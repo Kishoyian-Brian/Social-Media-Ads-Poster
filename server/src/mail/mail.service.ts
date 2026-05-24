@@ -7,10 +7,31 @@ export class MailService {
   private readonly logger = new Logger(MailService.name)
   private readonly from: string
   private readonly smtpConfigured: boolean
+  private readonly smtpHost?: string
+  private readonly smtpPort: number
+  private readonly smtpSecure: boolean
+  private readonly smtpUser?: string
+  private readonly smtpPass?: string
 
   constructor(private config: ConfigService) {
-    this.from = this.config.get<string>('SMTP_FROM') ?? 'noreply@social-manager.app'
-    this.smtpConfigured = Boolean(this.config.get<string>('SMTP_HOST'))
+    const host = this.config.get<string>('SMTP_HOST') ?? this.config.get<string>('MAIL_HOST')
+    const user = this.config.get<string>('SMTP_USER') ?? this.config.get<string>('MAIL_USER')
+    this.from =
+      this.config.get<string>('SMTP_FROM') ??
+      this.config.get<string>('MAIL_FROM') ??
+      user ??
+      'noreply@social-manager.app'
+    this.smtpConfigured = Boolean(host && user)
+    this.smtpHost = host
+    this.smtpPort = Number(
+      this.config.get<string>('SMTP_PORT') ?? this.config.get<string>('MAIL_PORT') ?? 587,
+    )
+    this.smtpSecure =
+      this.config.get<string>('SMTP_SECURE') === 'true' ||
+      this.config.get<string>('MAIL_SECURE') === 'true'
+    this.smtpUser = user
+    this.smtpPass =
+      this.config.get<string>('SMTP_PASS') ?? this.config.get<string>('MAIL_PASS')
   }
 
   async sendOtpEmail(to: string, code: string, purpose: 'registration' | 'login') {
@@ -37,12 +58,12 @@ export class MailService {
 
     try {
       const transporter = nodemailer.createTransport({
-        host: this.config.get<string>('SMTP_HOST'),
-        port: Number(this.config.get<string>('SMTP_PORT') ?? 587),
-        secure: this.config.get<string>('SMTP_SECURE') === 'true',
+        host: this.smtpHost,
+        port: this.smtpPort,
+        secure: this.smtpSecure,
         auth: {
-          user: this.config.get<string>('SMTP_USER'),
-          pass: this.config.get<string>('SMTP_PASS'),
+          user: this.smtpUser,
+          pass: this.smtpPass,
         },
       })
 

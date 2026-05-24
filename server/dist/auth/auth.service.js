@@ -41,6 +41,7 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var AuthService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
@@ -50,11 +51,12 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const mail_service_1 = require("../mail/mail.service");
 const bcrypt = __importStar(require("bcrypt"));
 const OTP_TTL_MS = 10 * 60 * 1000;
-let AuthService = class AuthService {
+let AuthService = AuthService_1 = class AuthService {
     constructor(prisma, jwtService, mailService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
         this.mailService = mailService;
+        this.logger = new common_1.Logger(AuthService_1.name);
     }
     generateOtp() {
         return (0, crypto_1.randomInt)(100000, 1000000).toString();
@@ -70,7 +72,10 @@ let AuthService = class AuthService {
     }
     async register(dto) {
         const email = dto.email.trim().toLowerCase();
-        const existing = await this.prisma.user.findUnique({ where: { email } });
+        const existing = await this.prisma.user.findUnique({
+            where: { email },
+            select: { id: true },
+        });
         if (existing) {
             throw new common_1.ConflictException('Email already registered.');
         }
@@ -94,7 +99,15 @@ let AuthService = class AuthService {
                 expiresAt,
             },
         });
-        const mailResult = await this.mailService.sendOtpEmail(email, code, 'registration');
+        try {
+            const mailResult = await this.mailService.sendOtpEmail(email, code, 'registration');
+            if (!mailResult.delivered && mailResult.devLogged) {
+                this.logger.warn(`Registration OTP for ${email} was not emailed (SMTP not configured). Check server logs.`);
+            }
+        }
+        catch {
+            throw new common_1.ServiceUnavailableException('Could not send verification email. Please try again later or contact support.');
+        }
         return {
             message: 'Verification code sent to your email.',
             email,
@@ -115,7 +128,10 @@ let AuthService = class AuthService {
         if (!otpValid) {
             throw new common_1.UnauthorizedException('Invalid verification code.');
         }
-        const existing = await this.prisma.user.findUnique({ where: { email } });
+        const existing = await this.prisma.user.findUnique({
+            where: { email },
+            select: { id: true },
+        });
         if (existing) {
             await this.prisma.pendingRegistration.delete({ where: { email } });
             throw new common_1.ConflictException('Email already registered.');
@@ -135,7 +151,17 @@ let AuthService = class AuthService {
     }
     async login(dto) {
         const email = dto.email.trim().toLowerCase();
-        const user = await this.prisma.user.findUnique({ where: { email } });
+        const user = await this.prisma.user.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                password: true,
+                xAccessToken: true,
+                tiktokAccessToken: true,
+            },
+        });
         if (!user) {
             throw new common_1.UnauthorizedException('Invalid credentials.');
         }
@@ -150,7 +176,7 @@ let AuthService = class AuthService {
     }
 };
 exports.AuthService = AuthService;
-exports.AuthService = AuthService = __decorate([
+exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         jwt_1.JwtService,
