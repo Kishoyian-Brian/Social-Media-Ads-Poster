@@ -50,12 +50,13 @@ let XService = XService_1 = class XService {
         body.set('code', code);
         body.set('redirect_uri', this.redirectUri);
         body.set('client_id', this.clientId);
-        body.set('client_secret', this.clientSecret);
         body.set('code_verifier', codeVerifier);
+        const basicAuth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
         const response = await fetch(this.tokenUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                Authorization: `Basic ${basicAuth}`,
             },
             body: body.toString(),
         });
