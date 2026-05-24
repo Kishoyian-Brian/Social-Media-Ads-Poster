@@ -2,6 +2,8 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
@@ -17,6 +19,8 @@ const OTP_TTL_MS = 10 * 60 * 1000
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -45,7 +49,10 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const email = dto.email.trim().toLowerCase()
-    const existing = await this.prisma.user.findUnique({ where: { email } })
+    const existing = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    })
     if (existing) {
       throw new ConflictException('Email already registered.')
     }
@@ -72,7 +79,19 @@ export class AuthService {
       },
     })
 
-    const mailResult = await this.mailService.sendOtpEmail(email, code, 'registration')
+    try {
+      const mailResult = await this.mailService.sendOtpEmail(email, code, 'registration')
+
+      if (!mailResult.delivered && mailResult.devLogged) {
+        this.logger.warn(
+          `Registration OTP for ${email} was not emailed (SMTP not configured). Check server logs.`,
+        )
+      }
+    } catch {
+      throw new ServiceUnavailableException(
+        'Could not send verification email. Please try again later or contact support.',
+      )
+    }
 
     return {
       message: 'Verification code sent to your email.',
@@ -99,7 +118,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid verification code.')
     }
 
-    const existing = await this.prisma.user.findUnique({ where: { email } })
+    const existing = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    })
     if (existing) {
       await this.prisma.pendingRegistration.delete({ where: { email } })
       throw new ConflictException('Email already registered.')
@@ -123,7 +145,17 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const email = dto.email.trim().toLowerCase()
-    const user = await this.prisma.user.findUnique({ where: { email } })
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        password: true,
+        xAccessToken: true,
+        tiktokAccessToken: true,
+      },
+    })
     if (!user) {
       throw new UnauthorizedException('Invalid credentials.')
     }
