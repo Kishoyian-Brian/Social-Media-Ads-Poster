@@ -64,7 +64,7 @@ export default function Register() {
 
     setSubmitting(true)
     try {
-      const result = await requestRegister(values.name, values.email, values.password)
+      await requestRegister(values.name, values.email, values.password)
       toast.success('New verification code sent')
     } catch (error: any) {
       toast.error(error.response?.data?.message ?? 'Could not resend code')
