@@ -178,21 +178,29 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <div className="px-6 py-8">
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div className="px-4 py-6 sm:px-6 sm:py-8">
+          <section className="mb-8 lg:hidden">
+            <AppOverview />
+          </section>
+
+          <div className="mb-8 hidden flex-wrap items-end justify-between gap-4 lg:flex">
             <div>
               <h2 className="text-2xl font-bold text-white">Overview</h2>
               <p className="mt-1 text-slate-400">Manage platforms and track your content.</p>
             </div>
+          </div>
+
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4 lg:hidden">
+            <h2 className="text-xl font-bold text-white">Quick actions</h2>
             <Link
               to="/posts/new"
-              className={`inline-flex sm:hidden ${btnPrimary} rounded-xl px-5 py-2.5`}
+              className={`inline-flex ${btnPrimary} rounded-xl px-5 py-2.5`}
             >
               + Create Post
             </Link>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="hidden gap-4 lg:grid sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total posts" value={stats.total} hint="All content you've created" />
             <StatCard label="Published" value={stats.published} hint="Successfully sent to platforms" accent="emerald" />
             <StatCard label="Pending" value={stats.pending} hint="Waiting to publish" accent="amber" />
@@ -207,7 +215,7 @@ export default function Dashboard() {
           <section className="mt-8">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Connected accounts</h2>
-              <span className="text-xs text-slate-500">OAuth · secure connection</span>
+              <span className="hidden text-xs text-slate-500 lg:inline">OAuth · secure connection</span>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <PlatformCard
@@ -237,11 +245,12 @@ export default function Dashboard() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-white">Content feed</h2>
-                <p className="text-sm text-slate-400">Recent posts and publish status</p>
+                <p className="mt-1 hidden text-sm text-slate-400 lg:block">Recent posts and publish status</p>
+                <p className="mt-1 text-sm text-slate-400 lg:hidden">Your recent posts</p>
               </div>
               <Link
                 to="/posts/new"
-                className={btnPrimary}
+                className={`hidden lg:inline-flex ${btnPrimary}`}
               >
                 New post
               </Link>
@@ -382,7 +391,7 @@ function PlatformCard({
             <p className="mt-0.5 text-sm text-slate-400">{description}</p>
           </div>
         </div>
-        <StatusPill connected={connected} />
+        <StatusPill connected={connected} className="hidden lg:inline-flex" />
       </div>
       <div className="mt-5 flex flex-wrap gap-2">
         <button
@@ -408,14 +417,14 @@ function PlatformCard({
   )
 }
 
-function StatusPill({ connected }: { connected: boolean }) {
+function StatusPill({ connected, className = '' }: { connected: boolean; className?: string }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
         connected
           ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20'
           : 'bg-neutral-900 text-slate-400 ring-1 ring-slate-700'
-      }`}
+      } ${className}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-slate-500'}`} />
       {connected ? 'Connected' : 'Not linked'}
@@ -442,7 +451,7 @@ function PostCard({ post, displayName }: { post: PostDTO; displayName: string })
               <time className="text-sm text-slate-500" dateTime={post.createdAt}>
                 {formatRelativeTime(post.createdAt)}
               </time>
-              <PostStatusBadge status={status} />
+              <PostStatusBadge status={status} className="hidden lg:inline-flex" />
             </div>
             <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-slate-200">{post.content}</p>
             {post.imageUrl ? (
@@ -451,16 +460,18 @@ function PostCard({ post, displayName }: { post: PostDTO; displayName: string })
               </div>
             ) : null}
             {post.failReason ? (
-              <p className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{post.failReason}</p>
+              <p className="mt-3 hidden rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400 lg:block">
+                {post.failReason}
+              </p>
             ) : null}
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 hidden flex-wrap gap-2 lg:flex">
               <PlatformResultChip platform="x" result={platformResults.x} />
               <PlatformResultChip platform="tiktok" result={platformResults.tiktok} />
             </div>
           </div>
         </div>
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-neutral-800 bg-black/40 px-5 py-3 text-xs text-slate-500">
+      <footer className="hidden flex-wrap items-center justify-between gap-2 border-t border-neutral-800 bg-black/40 px-5 py-3 text-xs text-slate-500 lg:flex">
         <span>Created {new Date(post.createdAt).toLocaleString()}</span>
         {post.publishedAt ? <span>Published {new Date(post.publishedAt).toLocaleString()}</span> : null}
       </footer>
@@ -468,7 +479,7 @@ function PostCard({ post, displayName }: { post: PostDTO; displayName: string })
   )
 }
 
-function PostStatusBadge({ status }: { status: string }) {
+function PostStatusBadge({ status, className = '' }: { status: string; className?: string }) {
   const styles: Record<string, string> = {
     sent: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
     pending: 'bg-amber-500/10 text-amber-400 ring-amber-500/20',
@@ -484,7 +495,9 @@ function PostStatusBadge({ status }: { status: string }) {
   }
 
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${styles[status] ?? styles.pending}`}>
+    <span
+      className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${styles[status] ?? styles.pending} ${className}`}
+    >
       {labels[status] ?? status}
     </span>
   )
@@ -520,6 +533,26 @@ function PlatformResultChip({ platform, result }: { platform: 'x' | 'tiktok'; re
   )
 }
 
+function AppOverview() {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+      <h2 className="text-lg font-bold text-white">About this app</h2>
+
+      <p className="mt-3 text-sm leading-relaxed text-neutral-300">
+        Social Manager is a simple tool for creators and small businesses to write social posts once and
+        publish them to X (Twitter) and TikTok from a single dashboard. Connect your accounts securely, then
+        manage your content without jumping between different apps.
+      </p>
+
+      <p className="mt-3 text-sm leading-relaxed text-neutral-400">
+        To get started, link your X and TikTok accounts in the section below, then tap Create Post to write
+        your message and add an optional image. When you publish, the post is sent to every platform you have
+        connected. Your recent posts appear in the feed further down the page.
+      </p>
+    </div>
+  )
+}
+
 function EmptyFeed() {
   return (
     <div className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-950 px-6 py-16 text-center">
@@ -541,8 +574,7 @@ function EmptyFeed() {
         Create your first post
       </Link>
     </div>
-
-)
+  )
 }
 
 function formatRelativeTime(dateStr: string) {

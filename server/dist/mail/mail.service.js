@@ -21,8 +21,44 @@ let MailService = MailService_1 = class MailService {
     constructor(config) {
         this.config = config;
         this.logger = new common_1.Logger(MailService_1.name);
-        this.from = this.config.get('SMTP_FROM') ?? 'noreply@social-manager.app';
-        this.smtpConfigured = Boolean(this.config.get('SMTP_HOST'));
+        const host = this.cleanEnv(this.config.get('SMTP_HOST') ?? this.config.get('MAIL_HOST'));
+        const user = this.cleanEnv(this.config.get('SMTP_USER') ?? this.config.get('MAIL_USER'));
+        this.resendApiKey = this.cleanEnv(this.config.get('RESEND_API_KEY'));
+        this.from =
+            this.cleanEnv(this.config.get('SMTP_FROM') ??
+                this.config.get('MAIL_FROM') ??
+                this.config.get('RESEND_FROM')) ??
+                user ??
+                'onboarding@resend.dev';
+        this.smtpUser = user;
+        this.smtpPass = this.cleanEnv(this.config.get('SMTP_PASS') ?? this.config.get('MAIL_PASS'));
+        this.smtpConfigured = Boolean(host && user && this.smtpPass);
+        this.useGmailPreset = host === 'smtp.gmail.com' || host === 'smtp.googlemail.com';
+        this.smtpHost = host;
+        this.smtpPort = Number(this.config.get('SMTP_PORT') ?? this.config.get('MAIL_PORT') ?? 587);
+        this.smtpSecure =
+            this.config.get('SMTP_SECURE') === 'true' ||
+                this.config.get('MAIL_SECURE') === 'true';
+        if (this.resendApiKey) {
+            this.logger.log('Email: using Resend HTTP API (works on Render free tier)');
+        }
+        else if (this.smtpConfigured) {
+            this.logger.log(`Email: using SMTP (${host})`);
+        }
+        else {
+            this.logger.warn('Email not configured. Set RESEND_API_KEY (recommended on Render) or SMTP_* / MAIL_* vars.');
+        }
+    }
+    cleanEnv(value) {
+        if (!value)
+            return undefined;
+        const trimmed = value.trim().replace(/^["']|["']$/g, '');
+        return trimmed || undefined;
+    }
+    normalizeAppPassword(pass) {
+        if (!pass)
+            return pass;
+        return pass.replace(/\s+/g, '');
     }
     async sendOtpEmail(to, code, purpose) {
         const subject = purpose === 'registration' ? 'Verify your Social Manager account' : 'Your Social Manager login code';
@@ -37,26 +73,64 @@ let MailService = MailService_1 = class MailService {
         <p style="color: #666; font-size: 14px;">This code expires in 10 minutes.</p>
       </div>
     `;
+        if (this.resendApiKey) {
+            await this.sendViaResend(to, subject, html, text);
+            return { delivered: true, devLogged: false };
+        }
         if (!this.smtpConfigured) {
             this.logger.warn(`SMTP not configured. OTP for ${to}: ${code}`);
             return { delivered: false, devLogged: true };
         }
         try {
-            const transporter = nodemailer_1.default.createTransport({
-                host: this.config.get('SMTP_HOST'),
-                port: Number(this.config.get('SMTP_PORT') ?? 587),
-                secure: this.config.get('SMTP_SECURE') === 'true',
-                auth: {
-                    user: this.config.get('SMTP_USER'),
-                    pass: this.config.get('SMTP_PASS'),
-                },
+            const pass = this.normalizeAppPassword(this.smtpPass);
+            const transporter = this.useGmailPreset && this.smtpUser && pass
+                ? nodemailer_1.default.createTransport({
+                    service: 'gmail',
+                    auth: { user: this.smtpUser, pass },
+                })
+                : nodemailer_1.default.createTransport({
+                    host: this.smtpHost,
+                    port: this.smtpPort,
+                    secure: this.smtpSecure,
+                    auth: {
+                        user: this.smtpUser,
+                        pass,
+                    },
+                    tls: { minVersion: 'TLSv1.2' },
+                });
+            await transporter.sendMail({
+                from: this.from,
+                to,
+                subject,
+                text,
+                html,
             });
-            await transporter.sendMail({ from: this.from, to, subject, text, html });
             return { delivered: true, devLogged: false };
         }
         catch (error) {
             this.logger.error(`Failed to send OTP email to ${to}`, error);
             throw error;
+        }
+    }
+    async sendViaResend(to, subject, html, text) {
+        const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${this.resendApiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                from: this.from,
+                to: [to],
+                subject,
+                html,
+                text,
+            }),
+        });
+        if (!response.ok) {
+            const body = await response.text();
+            this.logger.error(`Resend API error ${response.status}: ${body}`);
+            throw new Error(`Resend failed: ${response.status}`);
         }
     }
 };

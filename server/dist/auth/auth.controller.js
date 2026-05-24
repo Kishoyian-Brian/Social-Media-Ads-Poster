@@ -29,9 +29,10 @@ let AuthController = class AuthController {
     register(body) {
         return this.authService.register(body);
     }
-    verifyRegister(body) {
-        return this.authService.verifyRegister(body);
-    }
+    // @Post('verify-register')
+    // verifyRegister(@Body() body: VerifyRegisterDto) {
+    //   return this.authService.verifyRegister(body)
+    // }
     login(body) {
         return this.authService.login(body);
     }
@@ -61,13 +62,6 @@ __decorate([
     __metadata("design:paramtypes", [register_dto_1.RegisterDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "register", null);
-__decorate([
-    (0, common_1.Post)('verify-register'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [register_dto_1.VerifyRegisterDto]),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "verifyRegister", null);
 __decorate([
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),

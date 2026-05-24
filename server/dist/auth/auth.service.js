@@ -41,25 +41,17 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var AuthService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
-const crypto_1 = require("crypto");
 const prisma_service_1 = require("../prisma/prisma.service");
-const mail_service_1 = require("../mail/mail.service");
 const bcrypt = __importStar(require("bcrypt"));
-const OTP_TTL_MS = 10 * 60 * 1000;
-let AuthService = AuthService_1 = class AuthService {
-    constructor(prisma, jwtService, mailService) {
+// const OTP_TTL_MS = 10 * 60 * 1000
+let AuthService = class AuthService {
+    constructor(prisma, jwtService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
-        this.mailService = mailService;
-        this.logger = new common_1.Logger(AuthService_1.name);
-    }
-    generateOtp() {
-        return (0, crypto_1.randomInt)(100000, 1000000).toString();
     }
     buildUserResponse(user) {
         return {
@@ -79,76 +71,23 @@ let AuthService = AuthService_1 = class AuthService {
         if (existing) {
             throw new common_1.ConflictException('Email already registered.');
         }
-        const code = this.generateOtp();
-        const otpHash = await bcrypt.hash(code, 10);
         const passwordHash = await bcrypt.hash(dto.password, 10);
-        const expiresAt = new Date(Date.now() + OTP_TTL_MS);
-        await this.prisma.pendingRegistration.upsert({
-            where: { email },
-            create: {
+        await this.prisma.user.create({
+            data: {
                 name: dto.name.trim(),
                 email,
-                passwordHash,
-                otpHash,
-                expiresAt,
-            },
-            update: {
-                name: dto.name.trim(),
-                passwordHash,
-                otpHash,
-                expiresAt,
+                password: passwordHash,
             },
         });
-        try {
-            const mailResult = await this.mailService.sendOtpEmail(email, code, 'registration');
-            if (!mailResult.delivered && mailResult.devLogged) {
-                this.logger.warn(`Registration OTP for ${email} was not emailed (SMTP not configured). Check server logs.`);
-            }
-        }
-        catch {
-            throw new common_1.ServiceUnavailableException('Could not send verification email. Please try again later or contact support.');
-        }
+        // Email OTP (disabled — enable when SMTP/Resend is configured)
+        // const code = randomInt(100000, 1000000).toString()
+        // await this.prisma.pendingRegistration.upsert({ ... })
+        // await this.mailService.sendOtpEmail(email, code, 'registration')
         return {
-            message: 'Verification code sent to your email.',
-            email,
-            otpSent: true,
+            message: 'Account created. Please sign in.',
         };
     }
-    async verifyRegister(dto) {
-        const email = dto.email.trim().toLowerCase();
-        const pending = await this.prisma.pendingRegistration.findUnique({ where: { email } });
-        if (!pending) {
-            throw new common_1.BadRequestException('No pending registration found. Please register again.');
-        }
-        if (pending.expiresAt < new Date()) {
-            await this.prisma.pendingRegistration.delete({ where: { email } });
-            throw new common_1.BadRequestException('Verification code expired. Please register again.');
-        }
-        const otpValid = await bcrypt.compare(dto.code, pending.otpHash);
-        if (!otpValid) {
-            throw new common_1.UnauthorizedException('Invalid verification code.');
-        }
-        const existing = await this.prisma.user.findUnique({
-            where: { email },
-            select: { id: true },
-        });
-        if (existing) {
-            await this.prisma.pendingRegistration.delete({ where: { email } });
-            throw new common_1.ConflictException('Email already registered.');
-        }
-        const user = await this.prisma.user.create({
-            data: {
-                name: pending.name,
-                email: pending.email,
-                password: pending.passwordHash,
-            },
-        });
-        await this.prisma.pendingRegistration.delete({ where: { email } });
-        return {
-            token: this.jwtService.sign({ id: user.id, email: user.email }),
-            user: this.buildUserResponse(user),
-        };
-    }
+    // async verifyRegister(dto: VerifyRegisterDto) { ... }
     async login(dto) {
         const email = dto.email.trim().toLowerCase();
         const user = await this.prisma.user.findUnique({
@@ -176,9 +115,8 @@ let AuthService = AuthService_1 = class AuthService {
     }
 };
 exports.AuthService = AuthService;
-exports.AuthService = AuthService = AuthService_1 = __decorate([
+exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        jwt_1.JwtService,
-        mail_service_1.MailService])
+        jwt_1.JwtService])
 ], AuthService);
